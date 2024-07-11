@@ -51,7 +51,7 @@ const Index: React.FC = () => {
         </>
       ) : (
       <>
-        <div>반가워</div>
+        <div>asdasdsad</div>
       </>
       )}
       <OpenButton onClick={openModal}>Open Custom Modal</OpenButton>
