@@ -7,7 +7,7 @@ interface ModalWrapperProps {
   isOpen: boolean;
 }
 
-const ModalWrapper = styled(motion.div)<ModalWrapperProps>`
+const ModalWrapper = styled(motion.div) <ModalWrapperProps>`
   display: ${(props) => (props.isOpen ? 'flex' : 'none')};
   align-items: center;
   justify-content: center;
@@ -21,6 +21,8 @@ const ModalWrapper = styled(motion.div)<ModalWrapperProps>`
 `;
 
 const ModalContent = styled(motion.div)`
+  width:80%;
+  height: auto;
   background: white;
   padding: 20px;
   border-radius: 10px;
@@ -52,6 +54,7 @@ const Button = styled.button<{ color?: string }>`
   border-radius: 5px;
   cursor: pointer;
   margin-right: 10px;
+  margin-top:1.4rem;
 
   ${(props) =>
     props.color === '#ffffff' &&
@@ -59,6 +62,7 @@ const Button = styled.button<{ color?: string }>`
       border: 1px solid #000;
     `};
 `;
+
 
 function getContrastColor(background: string): string {
   const hexColor = background.replace('#', '');

@@ -12,6 +12,7 @@ const NotificationWrapper = styled.div`
 interface NotificationProps {
     message?: string;
     type?: 'default' | 'success' | 'error' | 'warning' | 'info';
+    closeTime?: number;
 }
 
 export interface NotificationRef {
@@ -19,7 +20,7 @@ export interface NotificationRef {
 }
 
 const Notification: React.ForwardRefRenderFunction<NotificationRef, NotificationProps> = (
-    { },
+    { closeTime = 5000 },
     ref
 ) => {
     useImperativeHandle(ref, () => ({
@@ -46,7 +47,7 @@ const Notification: React.ForwardRefRenderFunction<NotificationRef, Notification
 
     return (
         <NotificationWrapper>
-            <ToastContainer position="bottom-right" autoClose={3000} />
+            <ToastContainer position="bottom-right" autoClose={closeTime} />
         </NotificationWrapper>
     );
 };
