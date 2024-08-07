@@ -1,20 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import Cookies from 'js-cookie';
 
-// Props 타입 정의
-interface NavItem {
-  tag: string;
-  link: string;
-  items?: NavItem[];
-}
+const Header: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
 
-interface HeaderProps {
-  notices: string[];
-  title: string;
-  navItems: NavItem[];
-}
+  const toggleMenu = useCallback(() => setIsOpen(prev => !prev), []);
+  const closeMenu = useCallback(() => setIsOpen(false), []);
+
+  const isLoggedIn = useMemo(() => !!Cookies.get('accessToken'), []);
+
+  return (
+    <FixdHeadr>
+
+      <HeaderContainer>
+        <LogoTitle to="/">LABHUB</LogoTitle>
+        <Hamburger isOpen={isOpen} onClick={toggleMenu}>
+          <span />
+          <span />
+          <span />
+        </Hamburger>
+        <HeaderNav isOpen={isOpen}>
+          <CloseButton onClick={closeMenu}>×</CloseButton>
+          <NavItemContainer>
+            <div>
+              <NavLink to={'/currentsituation'}>현황</NavLink>
+            </div>
+            <div>
+              <NavLink to={'/support/faq'}>FAQ</NavLink>
+            </div>
+          </NavItemContainer>
+          <AuthLinks>
+            {isLoggedIn ? (
+              <>
+                <div>
+                  <NavLink to="/mypage" onClick={closeMenu}>마이페이지</NavLink>
+                </div>
+                <div>
+                  <NavLink to="/alarm" onClick={closeMenu}>알람</NavLink>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <NavLink to="/register" onClick={closeMenu}>회원가입</NavLink>
+                </div>
+                <div>
+                  <NavLink to="/login" onClick={closeMenu}>로그인</NavLink>
+                </div>
+              </>
+            )}
+          </AuthLinks>
+        </HeaderNav>
+      </HeaderContainer>
+    </FixdHeadr>
+  );
+};
+
+export default Header;
+
+const FixdHeadr = styled.div`
+  position : fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  width: 100%;
+`
 
 const HeaderContainer = styled.div`
   background-color: #282c34;
@@ -24,6 +76,12 @@ const HeaderContainer = styled.div`
   color: white;
   padding: 1rem 2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #1c1c1c; /* Darker background for dark mode */
+    color: #f0f0f0; /* Light grey text for contrast */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); /* Stronger shadow for dark mode */
+  }
 `;
 
 const LogoTitle = styled(Link)`
@@ -32,32 +90,31 @@ const LogoTitle = styled(Link)`
   color: white;
   text-decoration: none;
   transition: color 0.3s ease;
-  &:hover {
-    color: #61dafb;
-  }
-`;
 
-const NoticeBoard = styled.div`
-  font-weight: 200;
-  font-size: 1.2rem;
-  margin: 0.5rem 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  @media (max-width: 768px) {
-    display: none;
+  &:hover {
+    color: #0D80A0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    color: #f0f0f0; /* Light grey text for better contrast */
+    &:hover {
+      color: #39a2db; /* Brighter hover color */
+    }
   }
 `;
 
 const HeaderNav = styled.nav<{ isOpen: boolean }>`
   display: flex;
-  gap: 20px;
+  gap: 1.5rem;
+  align-items: center;
+
   @media (max-width: 768px) {
+    gap: 2rem;
     position: fixed;
     top: 0;
     right: ${({ isOpen }) => (isOpen ? '0' : '-100%')};
     width: 200px;
-    height: 100vh;
+    height: 110vh;
     background: #282c34;
     flex-direction: column;
     align-items: flex-start;
@@ -65,25 +122,21 @@ const HeaderNav = styled.nav<{ isOpen: boolean }>`
     transition: right 0.3s ease;
     z-index: 1000;
   }
+
+  @media (prefers-color-scheme: dark) {
+    @media (max-width: 768px) {
+      background: #1c1c1c; /* Darker background for dark mode */
+    }
+  }
 `;
 
 const NavItemContainer = styled.div`
-  position: relative;
-`;
+  display: flex;
+  gap: 1rem;
 
-const NavBtn = styled.button`
-  background: none;
-  border: none;
-  color: white;
-  border-radius: 2rem;
-  text-decoration: none;
-  display: block;
-  padding: 0.6rem 1.2rem;
-  cursor: pointer;
-  transition: background 0.3s ease, color 0.3s ease;
-  &:hover {
-    background: #61dafb;
-    color: #282c34;
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 2rem;
   }
 `;
 
@@ -91,39 +144,18 @@ const NavLink = styled(Link)`
   color: white;
   border-radius: 2rem;
   text-decoration: none;
-  display: block;
   padding: 0.6rem 1.2rem;
   transition: background 0.3s ease, color 0.3s ease;
+
   &:hover {
-    background: #61dafb;
-    color: #282c34;
+    background: #0D80A0;
   }
-`;
 
-const DropdownMenu = styled.div<{ isOpen: boolean }>`
-  width: 150px;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: #fff;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
-  z-index: 1000;
-`;
-
-const DropdownItem = styled(Link)`
-  color: #282c34;
-  padding: 0.8rem 1rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  display: block;
-  width: 100%;
-  text-align: center;
-  transition: background 0.3s ease;
-  &:hover {
-    background: #f1f1f1;
+  @media (prefers-color-scheme: dark) {
+    color: #f0f0f0; /* Light grey text */
+    &:hover {
+      background: #39a2db; /* Brighter background on hover */
+    }
   }
 `;
 
@@ -131,6 +163,7 @@ const Hamburger = styled.div<{ isOpen: boolean }>`
   display: none;
   flex-direction: column;
   cursor: pointer;
+
   span {
     height: 2px;
     width: 25px;
@@ -138,6 +171,7 @@ const Hamburger = styled.div<{ isOpen: boolean }>`
     margin: 3px;
     transition: all 0.3s ease;
     transform-origin: 1px;
+
     &:nth-child(1) {
       transform: ${({ isOpen }) => (isOpen ? 'rotate(45deg)' : 'rotate(0)')};
     }
@@ -149,8 +183,15 @@ const Hamburger = styled.div<{ isOpen: boolean }>`
       transform: ${({ isOpen }) => (isOpen ? 'rotate(-45deg)' : 'rotate(0)')};
     }
   }
+
   @media (max-width: 768px) {
     display: flex;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    span {
+      background: #f0f0f0; /* Light grey color for the hamburger lines */
+    }
   }
 `;
 
@@ -162,85 +203,22 @@ const CloseButton = styled.button`
   align-self: flex-end;
   cursor: pointer;
   display: none;
+
   @media (max-width: 768px) {
     display: block;
   }
+
+  @media (prefers-color-scheme: dark) {
+    color: #f0f0f0; /* Light grey text */
+  }
 `;
 
-const Header: React.FC<HeaderProps> = ({ notices, title = "LABHUB", navItems }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
-  const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
-  const [isLogging, setIsLogging] = useState(false);
+const AuthLinks = styled.div`
+  display: flex;
+  gap: 1rem;
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
-
-  const toggleDropdown = (index: number) => {
-    setOpenDropdown(openDropdown === index ? null : index);
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentNoticeIndex((prevIndex) => (prevIndex + 1) % notices.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [notices.length]);
-
-  useEffect(() => {
-    const accessToken = Cookies.get('accessToken');
-    setIsLogging(!!accessToken);
-  }, []);
-
-  return (
-    <HeaderContainer>
-      <LogoTitle to="/">{title}</LogoTitle>
-      <NoticeBoard>{notices[currentNoticeIndex]}</NoticeBoard>
-      <Hamburger isOpen={isOpen} onClick={toggleMenu}>
-        <span />
-        <span />
-        <span />
-      </Hamburger>
-      <HeaderNav isOpen={isOpen}>
-        <CloseButton onClick={closeMenu}>×</CloseButton>
-        {navItems.map((item, index) => (
-          <NavItemContainer key={index}>
-            {item.items ? (
-              <NavBtn onClick={() => toggleDropdown(index)}>{item.tag}</NavBtn>
-            ) : (
-              <NavLink to={item.link} onClick={closeMenu}>{item.tag}</NavLink>
-            )}
-            {item.items && (
-              <DropdownMenu isOpen={openDropdown === index}>
-                {item.items.map((subItem, subIndex) => (
-                  <DropdownItem key={subIndex} to={item.link + subItem.link} onClick={closeMenu}>
-                    {subItem.tag}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            )}
-          </NavItemContainer>
-        ))}
-        {
-          isLogging ?
-            <>
-              <NavLink to={'/mypage'} onClick={closeMenu}>마이페이지</NavLink>
-            </>
-            :
-            <>
-              <NavLink to={'/register'} onClick={closeMenu}>회원가입</NavLink>
-              <NavLink to={'/login'} onClick={closeMenu}>로그인</NavLink>
-            </>
-        }
-      </HeaderNav>
-    </HeaderContainer >
-  );
-};
-
-export default Header;
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 2rem;
+  }
+`;

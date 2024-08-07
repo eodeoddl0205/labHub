@@ -1,19 +1,38 @@
-import Calender from "../../components/Calender";
-import Header from "../../components/Header";
+import React, { Suspense, useState, useEffect } from 'react';
+import { useSpring, animated } from '@react-spring/web';
+import Skeleton from 'react-loading-skeleton';
+import styled from 'styled-components';
+
+const Calendar = React.lazy(() => import('../../components/Calender'));
+const Header = React.lazy(() => import('../../components/Header'));
 
 const CurrentSituation = () => {
-    const navItems = [
-        { tag: "현황", link: "/currentsituation" },
-        { tag: "FAQ", link: "/support/faq" },
-    ];
+    const [showCalendar, setShowCalendar] = useState(false);
+
+    useEffect(() => {
+        setShowCalendar(true);
+    }, []);
+
+    const props = useSpring({
+        opacity: showCalendar ? 1 : 0,
+        config: { duration: 300 },
+    });
+
     return (
-        <>
-            <Header notices={["편하게 실습실을 대여해요!", "개발자가 가장 좋아하는 동물은 고양이입니다.", "개발자는 아싸이기에 혼자 개발했습니다."]}
-                title="LABHUB"
-                navItems={navItems} />
-            <Calender />
-        </>
-    )
-}
+        <Suspense fallback={<Skeleton count={5} />}>
+            <MainContainer>
+                <Header />
+                <animated.div style={props}>
+                    <Calendar />
+                </animated.div>
+            </MainContainer>
+        </Suspense >
+    );
+};
+
+const MainContainer = styled.div`
+    margin-top: 80px;
+    width: 100%;
+`
 
 export default CurrentSituation;

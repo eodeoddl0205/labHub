@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSpring, animated } from '@react-spring/web';
 import styled from 'styled-components';
 import Notification, { NotificationRef } from './CustomFeatures/Notification';
 import Loader from './CustomFeatures/Loader';
@@ -16,223 +17,137 @@ interface ReservationResponse {
     [key: number]: Reservation[];
 }
 
-const CalendarContainer = styled.div`
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-
-  .Error {
-    display:flex;
-    justify-content:center;
-  }
-
-  @media (max-width: 768px) {
-    max-width: 100%;
-    padding: 0 10px;
-  }
-`;
-
-const CalendarTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 16px;
-  border-bottom: 1px solid #ddd;
-
-  th, td {
-    padding: 10px;
-    text-align: center;
-    border-bottom: 1px solid #ddd;
-  }
-
-  th {
-    background-color: #f2f2f2;
-  }
-
-  .applyBtn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 20px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 45px;
-
-    &:hover {
-      background-color: #45a049;
-    }
-  }
-  
-  .viewBtn {
-    background-color: #F7F008;
-    color: white;
-    border: none;
-    padding: 20px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 45px;
-
-    &:hover {
-      background-color: #ffe51f;
-    }
-  }
-
-  .FullBtn {
-    background-color: #6C63FF;
-    color: white;
-    border: none;
-    padding: 20px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 45px;
-
-    &:hover {
-      background-color: #5e54ff;
-    }
-  }
-
-  .Impossible {
-    background-color: #FF6584;
-    color: white;
-    border: none;
-    padding: 20px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 45px;
-
-    &:hover {
-      background-color: #ff5476;
-    }
-  }
-
-  .status {
-    font-size: 12px;
-    color: #888;
-  }
-`;
-
-const Balls = styled.div`
-    text-align: center;
-    padding: 20px;
-    display:flex;
-    justify-content:center;
-    gap: 1rem;
-
-    .redBall {
-        background-color: #FF6584;
-        color: white;
-        border: none;
-        padding: 10px 10px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 45px;  
-    }
-    .yellowBall {
-        background-color: #F7F008;
-        color: white;
-        border: none;
-        padding: 10px 10px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 45px;  
-    }
-    .greenBall {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 10px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 45px;  
-    }
-    .purpleBall {
-        background-color: #6C63FF;
-        color: white;
-        border: none;
-        padding: 10px 10px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 45px;  
-    }
-`
-
 const Calendar = () => {
     const navigate = useNavigate();
-    const [reservations, setReservations] = useState<Reservation[]>([]);
+    const [reservations, setReservations] = useState<{ [key: number]: Reservation[] }>({});
     const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
-
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isError, setIsError] = useState<string>('');
+    const [etag, setEtag] = useState<string>('');
 
     const notificationRef = useRef<NotificationRef>(null);
 
-    const fetchReservations = async () => {
+    const [showCalendar, setShowCalendar] = useState<boolean>(true);
+
+    const Props = useSpring({
+        opacity: showCalendar ? 1 : 0,
+        transform: showCalendar ? 'translateY(0%)' : 'translateY(+0.8%)',
+        config: { duration: 200 },
+    });
+
+    useEffect(() => {
+        const savedMonth = localStorage.getItem('currentMonth');
+        const savedReservations = localStorage.getItem('reservations');
+        const savedEtag = localStorage.getItem('etag');
+        if (savedMonth) {
+            setCurrentMonth(Number(savedMonth));
+        }
+        if (savedReservations) {
+            setReservations(JSON.parse(savedReservations));
+        }
+        if (savedEtag) {
+            setEtag(savedEtag);
+        }
+        fetchReservations(savedEtag);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('currentMonth', currentMonth.toString());
+    }, [currentMonth]);
+
+    useEffect(() => {
+        localStorage.setItem('reservations', JSON.stringify(reservations));
+    }, [reservations]);
+
+    useEffect(() => {
+        localStorage.setItem('etag', etag);
+    }, [etag]);
+
+    const fetchReservations = async (savedEtag: string | null) => {
         try {
             setIsLoading(true);
-            console.log(`${apiUrl}/api/lab/calender 에다가 get 요청`);
-            const response = await axios.get<ReservationResponse>(`${apiUrl}/api/lab/calender`);
-            const allReservations = Object.values(response.data).flat();
-            setReservations(allReservations);
-            setIsLoading(false);
+            const response = await axios.get<ReservationResponse>(`${apiUrl}/api/calendar`, {
+                headers: {
+                    'If-None-Match': savedEtag || ''
+                },
+                validateStatus: (status) => status >= 200 && status < 300 || status === 304
+            });
+
+            if (response.status === 200) {
+                console.log("ETag received:", response.headers['etag']);
+                setReservations(response.data);
+                const newEtag = response.headers['etag'] || '';
+                setEtag(newEtag);
+                localStorage.setItem('etag', newEtag);
+            } else if (response.status === 304) {
+                console.log("304 Not Modified: Data is up-to-date");
+            }
         } catch (error) {
-            setIsError('' + error);
-            console.error('Error fetching reservations:', error);
+            if (axios.isAxiosError(error)) {
+                setIsError(`Error: ${error.message}`);
+            } else {
+                setIsError('Unexpected error occurred');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchReservations();
-    }, []);
-
-    const handleApplication = async (date: string) => {
-        console.log('예약 요청 날짜:', date);
-        navigate(`/apply/${date}`);
-    };
-
-    const handleView = async (date: string) => {
-        console.log('예약 보기 날짜:', date);
+    const handleView = (date: string) => {
         navigate(`/view/${date}`);
     };
 
+    const handleImpossible = (reason: string) => {
+        const messages: { [key: string]: string } = {
+            'admin': "관리자가 막아 놓은 날짜입니다.",
+            'previousDate': "과거로는 신청할 수 없습니다.",
+            'unknown': '알 수 없는 이유로 막혀있습니다.',
+        };
+        notificationRef.current?.notify(messages[reason] || '알 수 없는 이유로 막혀있습니다.', 'error');
+    };
+
     const handlePreviousMonth = () => {
-        setCurrentMonth((prevMonth) => (prevMonth === 0 ? 11 : prevMonth - 1));
+        setShowCalendar(false);
+        setTimeout(() => {
+            setCurrentMonth(prevMonth => (prevMonth === 0 ? 11 : prevMonth - 1));
+            setShowCalendar(true);
+        }, 200);
     };
 
     const handleNextMonth = () => {
-        setCurrentMonth((prevMonth) => (prevMonth === 11 ? 0 : prevMonth + 1));
+        if (showCalendar) {
+            setShowCalendar(false);
+            setTimeout(() => {
+                setCurrentMonth(prevMonth => (prevMonth === 11 ? 0 : prevMonth + 1));
+                setShowCalendar(true);
+            }, 200);
+        }
     };
 
     const currentDate = new Date();
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentMonth, 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentMonth + 1, 0);
-
     const daysInMonth = lastDayOfMonth.getDate();
 
+    const renderButton = (status: string, formattedDate: string, isPastDate: boolean) => {
+        if (isPastDate) {
+            return <ImpossibleButton aria-label="불가능 버튼" onClick={() => handleImpossible('previousDate')} />;
+        }
+
+        switch (status) {
+            case 'applied':
+                return <ViewButton aria-label="신청현황 보기 버튼" onClick={() => handleView(formattedDate)} />;
+            case 'full':
+                return <FullButton aria-label="신청현황 보기 버튼" onClick={() => handleView(formattedDate)} />;
+            case 'impossible':
+                return <ImpossibleButton aria-label="관리자로 인해 막힌 버튼" onClick={() => handleImpossible('admin')} />;
+            default:
+                return <ApplyButton aria-label="신청하기 버튼" onClick={() => handleView(formattedDate)} />;
+        }
+    };
+
     const renderCalendar = () => {
-        const calendarRows = [];
+        const calendarRows: JSX.Element[] = [];
         let days: JSX.Element[] = [];
         const startDayOfWeek = firstDayOfMonth.getDay();
 
@@ -242,27 +157,16 @@ const Calendar = () => {
 
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(currentDate.getFullYear(), currentMonth, day);
-            const sendDate = new Date(currentDate.getFullYear(), currentMonth, day + 1);
-            const formattedDate = sendDate.toISOString().slice(0, 10);
-            let isApplied, isFull, isImpossible, isPastDate;
-
-            if (reservations) {
-                const reservationInfo = reservations.find(reservation => reservation.date === formattedDate);
-                isApplied = reservationInfo && reservationInfo.status === 'applied';
-                isFull = reservationInfo && reservationInfo.status === 'full';
-                isImpossible = reservationInfo && reservationInfo.status === 'impossible';
-            }
-
-            isPastDate = sendDate < new Date();
+            const formattedDate = date.toISOString().slice(0, 10);
+            const reservationsForMonth = reservations[currentMonth] || [];
+            const reservationInfo = reservationsForMonth.find(reservation => reservation.date === formattedDate);
+            const status = reservationInfo?.status || '';
+            const isPastDate = date < new Date(currentDate.setHours(0, 0, 0, 0));
 
             days.push(
                 <td key={`day-${day}`}>
                     <div className="date">{day}</div>
-                    {!isApplied && !isPastDate && !isFull && !isImpossible && <button className='applyBtn' aria-label="신청하기 버튼" onClick={() => handleApplication(formattedDate)}></button>}
-                    {isApplied && !isPastDate && <button className='viewBtn' aria-label="신청현황 보기 버튼" onClick={() => handleView(formattedDate)}></button>}
-                    {isFull && !isPastDate && <button className='FullBtn' aria-label="신청현황 보기 버튼" onClick={() => handleView(formattedDate)}></button>}
-                    {isImpossible && !isPastDate && <button className='Impossible' aria-label="관리자로 인해 막힌 버튼" onClick={() => handImpossible('admin')}></button>}
-                    {isPastDate && <button className='Impossible' aria-label="불가능 버튼" onClick={() => handImpossible('previousDate')}></button>}
+                    {renderButton(status, formattedDate, isPastDate)}
                 </td>
             );
 
@@ -277,11 +181,13 @@ const Calendar = () => {
                 <thead>
                     <tr>
                         <th>
-                            <button className='nextBtn' aria-label="이전 달력으로 넘기기" onClick={handlePreviousMonth}>◁</button>
+                            <Button className='prevBtn' aria-label="이전 달력으로 넘기기" onClick={handlePreviousMonth}>
+                            </Button>
                         </th>
                         <th colSpan={5}>{new Date(currentDate.getFullYear(), currentMonth, 1).toLocaleDateString('ko-KR', { month: 'long' })}</th>
                         <th>
-                            <button className='nextBtn' aria-label="다음 달력으로 넘기기" onClick={handleNextMonth}>▷</button>
+                            <Button className='nextBtn' aria-label="다음 달력으로 넘기기" onClick={handleNextMonth}>
+                            </Button>
                         </th>
                     </tr>
                     <tr>
@@ -299,37 +205,106 @@ const Calendar = () => {
         );
     };
 
-    const handImpossible = (Reason: string) => {
-        if (Reason === 'admin') {
-            if (notificationRef.current) {
-                notificationRef.current.notify("관리자가 막아 놓은 날짜입니다.", 'error');
-            }
-        } else if (Reason === 'previousDate') {
-            if (notificationRef.current) {
-                notificationRef.current.notify("과거로는 신청할 수 없습니다.", 'error');
-            }
-        } else if (Reason === 'unknown') {
-            if (notificationRef.current) {
-                notificationRef.current.notify('알 수 없는 이유로 막혀있습니다.', 'error');
-            }
-        }
-    };
-
     return (
         <>
             <Notification ref={notificationRef} closeTime={1000} />
             <CalendarContainer>
-                <Balls>
-                    <span className='redBall'></span>불가능
-                    <span className='yellowBall'></span>신청됨
-                    <span className='greenBall'></span>신청가능
-                    <span className='purpleBall'></span>가득참
-                </Balls>
-                {isError && (<div className='Error'>{isError}</div>)}
-                {!isLoading ? renderCalendar() : <Loader loading={isLoading} color="#d4d4d4" size={60} message="캘린더 불러오는 중..." bgColor="rgba(255, 255, 255, 0.1)" />}
+                {isError && <div className='Error' style={{marginBottom:"20px"}}>{isError}</div>}
+                {!isLoading ? (
+                    <animated.div style={Props}>{renderCalendar()}</animated.div>
+                ) : (
+                    <Loader loading={isLoading} color="#d4d4d4" size={60} message="캘린더 불러오는 중..." bgColor="rgba(255, 255, 255, 0.1)" messageColor='#000000' />
+                )}
             </CalendarContainer>
         </>
     );
 };
+
+const CalendarContainer = styled.div`
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+  border-radius: 10px;
+
+  .Error {
+    display: flex;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    max-width: 90%;
+    padding: 0 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #222;
+  }
+`;
+
+const CalendarTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  border-bottom: 1px solid #ddd;
+
+  th, td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+  }
+
+  th {
+    background-color: #d2d2d2;
+  }
+
+  @media (max-width: 768px) {
+    th, td {
+        padding: 5px;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #222;
+    th {
+        background-color: #666;
+    }
+  }
+`;
+
+const Button = styled.button`
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 45px;
+  border: none;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  @media (max-width: 768px) {
+    padding: 15px;
+  }
+`;
+
+const ApplyButton = styled(Button)`
+  background-color: #4CAF50;
+`;
+
+const ViewButton = styled(Button)`
+  background-color: #F7F008;
+`;
+
+const FullButton = styled(Button)`
+  background-color: #6C63FF;
+`;
+
+const ImpossibleButton = styled(Button)`
+  background-color: #FF6584;
+`;
 
 export default Calendar;

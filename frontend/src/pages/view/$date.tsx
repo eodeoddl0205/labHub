@@ -5,6 +5,7 @@ const ViewPage = () => {
 
   return (
     <div>
+      
       <h1>View Page</h1>
       <p>Date: {date}</p>
     </div>

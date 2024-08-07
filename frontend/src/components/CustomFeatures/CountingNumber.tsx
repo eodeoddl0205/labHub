@@ -14,9 +14,9 @@ const CountingNumber: React.FC<CountingNumberProps> = ({ initialCount, duration 
   });
 
   return (
-    <div>
+    <>
       <animated.div>{number.to((val: number) => Math.floor(val))}</animated.div>
-    </div>
+    </>
   );
 };
 

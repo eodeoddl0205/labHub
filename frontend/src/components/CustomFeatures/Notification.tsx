@@ -1,17 +1,9 @@
 // src/components/Notification.tsx
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast, ToastOptions } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import styled from 'styled-components';
-
-const NotificationWrapper = styled.div`
-  text-align: center;
-  margin-bottom: 20px;
-`;
 
 interface NotificationProps {
-    message?: string;
-    type?: 'default' | 'success' | 'error' | 'warning' | 'info';
     closeTime?: number;
 }
 
@@ -25,30 +17,29 @@ const Notification: React.ForwardRefRenderFunction<NotificationRef, Notification
 ) => {
     useImperativeHandle(ref, () => ({
         notify: (message: string, type?: 'default' | 'success' | 'error' | 'warning' | 'info') => {
+            const options: ToastOptions = { autoClose: closeTime };
             switch (type) {
                 case 'success':
-                    toast.success(message);
+                    toast.success(message, options);
                     break;
                 case 'error':
-                    toast.error(message);
+                    toast.error(message, options);
                     break;
                 case 'warning':
-                    toast.warning(message);
+                    toast.warning(message, options);
                     break;
                 case 'info':
-                    toast.info(message);
+                    toast.info(message, options);
                     break;
                 default:
-                    toast(message);
+                    toast(message, options);
                     break;
             }
         }
     }));
 
     return (
-        <NotificationWrapper>
-            <ToastContainer position="bottom-right" autoClose={closeTime} />
-        </NotificationWrapper>
+        <ToastContainer position="bottom-right" autoClose={closeTime} />
     );
 };
 
